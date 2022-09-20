@@ -1,134 +1,57 @@
-/////// app.js
-
-const express = require("express");
-const path = require("path");
-const session = require("express-session");
-const passport = require("passport");
-const LocalStrategy = require("passport-local").Strategy;
-const mongoose = require("mongoose");
-const Schema = mongoose.Schema;
 require('dotenv').config()
-bcrypt = require('bcryptjs')
+const express = require("express");
+require("express-async-errors")
+const session = require("express-session")
+const passport = require('passport')
 const MongoDBStore = require('connect-mongodb-session')(session)
 
-var store = new MongoDBStore({
-  uri: process.env.MONGO_URI,
+const passport_init = require('./passport/passport_init')
+const connectDB = require('./db/connect');
+const page_router = require('./routes/page_routes')
+const restricted_router = require('./routes/restricted_routes')
+const { authMiddleware, setCurrentUser } = require('./middleware/auth')
+const errorHandlerMiddleware = require('./middleware/error-handler')
+const notFoundMiddleware = require('./middleware/not-found')
+
+const url = process.env.MONGO_URI
+const store = new MongoDBStore({ // may throw an error, which won't be caught
+  uri: url,
   collection: 'mySessions'
 });
-
-// Catch errors
 store.on('error', function (error) {
   console.log(error);
 });
 
-const mongoDb = process.env.MONGO_URI
-mongoose.connect(mongoDb);
-const db = mongoose.connection;
-db.on("error", console.error.bind(console, "mongo connection error"));
-
-const User = mongoose.model(
-  "User",
-  new Schema({
-    username: { type: String, required: true },
-    password: { type: String, required: true }
-  })
-);
-
 const app = express();
-app.set("views", __dirname);
+
 app.set("view engine", "ejs");
 
 app.use(session({
   secret: process.env.SESSION_SECRET, resave: false, saveUninitialized: true,
   store: store
 }))
-passport.use(
-  new LocalStrategy((username, password, done) => {
-    User.findOne({ username: username }, (err, user) => {
-      if (err) {
-        return done(err);
-      }
-      if (!user) {
-        return done(null, false, { message: "Incorrect username" });
-      }
-      bcrypt.compare(password, user.password, (err, result) => {
-        if (result) {
-          return done(null, user)
-        } else {
-          return done(null, false, { message: "Incorrect password" })
-        }
-      })
-      // return done(null, user);
-    });
-  })
-);
-passport.serializeUser(function (user, done) {
-  done(null, user.id);
-});
-
-passport.deserializeUser(function (id, done) {
-  User.findById(id, function (err, user) {
-    done(err, user);
-  });
-});
+passport_init()
 app.use(passport.initialize());
 app.use(passport.session());
 app.use(express.urlencoded({ extended: false }));
-app.use(function (req, res, next) {
-  res.locals.currentUser = req.user;
-  next();
-});
-const authMiddleware = (req, res, next) => {
-  if (!req.user) {
-    if (!req.session.messages) {
-      req.session.messages = []
-    }
-    req.session.messages.push("You can't access that page before logon.")
-    res.redirect('/')
-  } else {
-    next()
-  }
-}
-app.get("/", (req, res) => {
-  let messages = []
-  if (req.session.messages) {
-    messages = req.session.messages
-    req.session.messages = []
-  }
-  res.render("index", { messages });
-});
-app.get("/sign-up", (req, res) => res.render("sign-up-form"));
-app.post("/sign-up", async (req, res, next) => {
+
+app.use(setCurrentUser)
+app.use('/',page_router)
+app.use('/restricted',authMiddleware, restricted_router)
+app.use(notFoundMiddleware);
+app.use(errorHandlerMiddleware);
+
+const port = process.env.PORT || 3000;
+
+const start = async () => {
   try {
-    hashedPassword = await bcrypt.hash(req.body.password, 10)
-    await User.create({ username: req.body.username, password: hashedPassword })
-    res.redirect("/");
-  } catch (err) {
-    return next(err)
+    await connectDB(process.env.MONGO_URI);
+    app.listen(port, () =>
+      console.log(`Server is listening on port ${port}...`)
+    );
+  } catch (error) {
+    console.log(error);
   }
-});
+};
 
-app.get('/restricted', authMiddleware, (req, res) => {
-  if (!req.session.pageCount) {
-    req.session.pageCount = 1
-  } else {
-    req.session.pageCount++
-  }
-  res.render('restricted', { pageCount: req.session.pageCount })
-})
-
-app.post(
-  "/log-in",
-  passport.authenticate("local", {
-    successRedirect: "/",
-    failureRedirect: "/",
-    failureMessage: true
-  })
-);
-app.get("/log-out", (req, res) => {
-  req.session.destroy(function (err) {
-    res.redirect("/")
-  })
-});
-
-app.listen(3000, () => console.log("app listening on port 3000!"));
+start();
