@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+<body>
+<h1>Notes</h1>
+<% if (notes.length === 0) { %>
+<p>There are no notes to display.</p>
+<% } else { %>
+  <table>
+    <tr>
+      <th>title</th>
+      <th colspan="3"></th>
+    </tr>
+    <% for (let i=0; i<notes.length; i++) { %>
+      <tr>
+      <td><%= notes[i].title %></td>
+      <td><a href="/restricted/show/<%=notes[i].id%>">Show</a></td>
+      <td><a href="/restricted/show-safe/<%=notes[i].id%>">Show Safely</a></td>
+      <td><a href="/restricted/delete/<%=notes[i].id%>">Delete</a></td>
+    </tr>
+    <% } %>
+  </table>
+<% } %>
+<a href="/restricted/add-note">Add a note</a>
+</body>
+</html>
