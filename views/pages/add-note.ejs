@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+<body>
+    <h1>Add a new note</h1>
+    <form action="/restricted/add-note" method="post">
+       <label for="title">title</label>
+       <input type="text" id="title" name="title">
+       <br>
+       <label for="text">text</label>
+       <textarea id="text" name="text"></textarea>
+       <br>
+       <input type="submit">Add</form>
+    </form>
+<a href="/restricted/notes-list">Back</a>
+</body>
+</html>
