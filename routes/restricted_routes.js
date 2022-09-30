@@ -3,6 +3,7 @@ const express = require("express");
 const Note = require("../models/Note")
 
 const { render_restricted } = require("../controllers/page_controller");
+const { render } = require("ejs");
 
 const router = express.Router();
 
@@ -36,10 +37,16 @@ router.route("/").get(render_restricted);
 router.route("/add-note").get((req,res) => { 
     res.render("pages/add-note")
   }).post(add)
-router.route("/not-found-note").get((req,res) => {render("pages/not-found-note")})
+router.route("/not-found-note").get((req,res) => {res.render("pages/not-found-note")})
 router.route("/notes-list").get(notesList)
 router.route("/show/:noteid").get(show)
 router.route("/show-safe/:noteid").get(showSafe)
 router.route("/delete/:noteid").get(deleteNote)
+router.route("/products").get((req,res) => {
+    res.render("pages/products")
+})
+router.route("/product").get((req,res) => {
+    res.render("pages/out-of-stock", { productName: req.query.product })
+})
 
 module.exports = router;
